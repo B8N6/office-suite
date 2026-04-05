@@ -1,0 +1,105 @@
+name: Deploy to server
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          password: ${{ secrets.DEPLOY_PASSWORD }}
+          script_stop: true
+          command_timeout: 60m
+          script: |
+            set -e
+            export DEBIAN_FRONTEND=noninteractive
+            export PATH=${PATH}:/usr/local/go/bin
+
+            if [ ! -d /opt/b8n6-office-suite-src/.git ]; then
+              git clone https://github.com/B8N6/office-suite.git /opt/b8n6-office-suite-src
+            else
+              git -C /opt/b8n6-office-suite-src fetch origin main
+              git -C /opt/b8n6-office-suite-src reset --hard origin/main
+            fi
+
+            if ! command -v go >/dev/null 2>&1 || ! /usr/local/go/bin/go version | grep -q 'go1.22'; then
+              cd /tmp
+              curl -fsSLO https://go.dev/dl/go1.22.3.linux-amd64.tar.gz
+              rm -rf /usr/local/go
+              tar -C /usr/local -xzf go1.22.3.linux-amd64.tar.gz
+              rm go1.22.3.linux-amd64.tar.gz
+            fi
+
+            if ! command -v node >/dev/null 2>&1 || ! node --version | grep -q '^v20\.'; then
+              curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+              apt-get update -qq
+              apt-get install -y -qq nodejs
+            fi
+
+            cd /opt/b8n6-office-suite-src/frontend
+            npm ci
+            npm run build
+
+            cd /opt/b8n6-office-suite-src/backend
+            /usr/local/go/bin/go mod download
+            /usr/local/go/bin/go build -o /opt/b8n6-office-suite-src/b8n6mail .
+
+            mkdir -p /opt/b8n6-office-suite/frontend /opt/b8n6-office-suite/data
+            cp /opt/b8n6-office-suite-src/b8n6mail /opt/b8n6-office-suite/
+            rm -rf /opt/b8n6-office-suite/frontend/*
+            cp -r /opt/b8n6-office-suite-src/frontend/dist/* /opt/b8n6-office-suite/frontend/
+
+            if [ ! -f /opt/b8n6-office-suite/data/config.json ]; then
+              cp /opt/b8n6-office-suite-src/data/config.example.json /opt/b8n6-office-suite/data/config.json
+              SECRET=$(openssl rand -hex 32)
+              sed -i "s/CHANGE-THIS-TO-A-LONG-RANDOM-SECRET/${SECRET}/" /opt/b8n6-office-suite/data/config.json
+            fi
+
+            chown -R www-data:www-data /opt/b8n6-office-suite
+            chmod +x /opt/b8n6-office-suite/b8n6mail
+
+            cat >/etc/systemd/system/b8n6-office-suite.service <<'EOF'
+            [Unit]
+            Description=B8N6 Office Suite
+            After=network.target
+
+            [Service]
+            Type=simple
+            User=www-data
+            Group=www-data
+            WorkingDirectory=/opt/b8n6-office-suite
+            ExecStart=/opt/b8n6-office-suite/b8n6mail
+            Restart=always
+            RestartSec=5
+            Environment=PORT=8787
+            Environment=SECURE_COOKIES=false
+            Environment=TLS_VERIFY=true
+
+            NoNewPrivileges=true
+            PrivateTmp=true
+            ProtectSystem=strict
+            ProtectHome=true
+            ReadWritePaths=/opt/b8n6-office-suite/data
+            ProtectKernelTunables=true
+            ProtectKernelModules=true
+            ProtectControlGroups=true
+            RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+            LockPersonality=true
+            MemoryDenyWriteExecute=true
+
+            [Install]
+            WantedBy=multi-user.target
+            EOF
+
+            systemctl daemon-reload
+            systemctl enable b8n6-office-suite
+            systemctl restart b8n6-office-suite
+            (command -v ufw >/dev/null 2>&1 && ufw allow 8787/tcp) || true
+            systemctl is-active --quiet b8n6-office-suite
