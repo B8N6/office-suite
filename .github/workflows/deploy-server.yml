@@ -9,8 +9,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger deploy webhook
-        env:
-          DEPLOY_WEBHOOK_TOKEN: ${{ secrets.DEPLOY_WEBHOOK_TOKEN }}
+      - name: Auto deploy note
         run: |
-          curl --fail --silent --show-error -X POST             -H "X-Deploy-Token: ${DEPLOY_WEBHOOK_TOKEN}"             http://187.77.135.168:9001/deploy
+          echo "Server-side auto-deploy watcher is enabled."
+          echo "Changes pushed to main are picked up on the server automatically."
