@@ -74,7 +74,8 @@ func main() {
 	// Load config
 	cfg := loadConfig(dataDir)
 
-	// Ensure admin.json exists with default credentials
+	// Seed default b8n6.com domain + owner if empty (fresh install)
+	ensureDefaultDomain()
 	ensureAdminConfig()
 
 	// Initialise session store
@@ -298,8 +299,9 @@ func ensureAdminConfig() {
 	}
 	seed := os.Getenv("B8N6_INITIAL_OWNER_EMAIL")
 	if seed == "" {
-		log.Println("⚠  SECURITY: No admin accounts exist. Set B8N6_INITIAL_OWNER_EMAIL to bootstrap an owner, or manually add an entry to data/admin.json.")
-		return
+		// Default owner: admin@b8n6.com (matches ensureDefaultDomain's b8n6.com)
+		seed = "admin@b8n6.com"
+		log.Printf("ℹ  No B8N6_INITIAL_OWNER_EMAIL set — defaulting to %s. Log in with that mailbox's IMAP password.", seed)
 	}
 	// Verify the seeded email's domain is configured, otherwise the owner
 	// will never be able to log in via IMAP.
@@ -394,4 +396,34 @@ func registerSessionTypes() {
 	// gorilla/sessions uses encoding/gob; primitive types (string, int, bool)
 	// are registered automatically. No additional registration needed for our
 	// usage since we store only basic types.
+}
+
+// ensureDefaultDomain seeds the b8n6.com domain on fresh installs so the
+// default admin@b8n6.com owner can log in via IMAP. Namecheap's registrar
+// hosting is used as the mail-server target (can be edited via admin UI).
+func ensureDefaultDomain() {
+	domains, err := storage.ReadDomains()
+	if err == nil && len(domains) > 0 {
+		return // already has at least one domain
+	}
+	def := models.Domain{
+		ID:       uuid.NewString(),
+		Domain:   "b8n6.com",
+		ImapHost: "host42-4.registrar-servers.com",
+		ImapPort: 993,
+		ImapSSL:  true,
+		SmtpHost: "host42-4.registrar-servers.com",
+		SmtpPort: 465,
+		SmtpSSL:  true,
+		Active:   true,
+		Notes:    "Default domain (Namecheap reseller hosting)",
+		Created:  time.Now().UTC().Format(time.RFC3339),
+		Updated:  time.Now().UTC().Format(time.RFC3339),
+	}
+	if err := storage.WriteDomains([]models.Domain{def}); err != nil {
+		log.Printf("warn: seed default domain: %v", err)
+		return
+	}
+	log.Printf("✓  Seeded default domain: %s (IMAP %s:%d, SMTP %s:%d)",
+		def.Domain, def.ImapHost, def.ImapPort, def.SmtpHost, def.SmtpPort)
 }
