@@ -1,6 +1,6 @@
 module b8n6mail
 
-go 1.26
+go 1.22
 
 require (
 	github.com/emersion/go-imap v1.2.1
