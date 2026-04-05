@@ -64,6 +64,9 @@ jobs:
 
             chown -R www-data:www-data /opt/b8n6-office-suite
             chmod +x /opt/b8n6-office-suite/b8n6mail
+            mkdir -p /opt/frontend
+            rm -rf /opt/frontend/dist
+            ln -s /opt/b8n6-office-suite/frontend /opt/frontend/dist
 
             cat >/etc/systemd/system/b8n6-office-suite.service <<'EOF'
             [Unit]
