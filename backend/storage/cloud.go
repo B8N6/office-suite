@@ -103,8 +103,7 @@ func SaveCloudBlob(email, origName, mimeType string, src io.Reader, declaredSize
 		return nil, copyErr
 	}
 	if declaredSize > 0 && written != declaredSize {
-		// Not fatal — trust the actual bytes on disk.
-		written = written
+		// Not fatal — trust the actual bytes on disk and keep the real byte count.
 	}
 
 	// Update index
