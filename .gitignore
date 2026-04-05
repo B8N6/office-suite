@@ -1,0 +1,52 @@
+# Binaries
+b8n6mail
+b8n6mail.exe
+b8n6mail.exe~
+*.exe~
+*.log
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/*.tsbuildinfo
+
+# Backend
+backend/tmp/
+
+# Data directories (contain secrets: passwords, sessions, files, branding)
+data/admin.json
+data/domains.json
+data/branding.json
+data/config.json
+!data/config.example.json
+data/sessions/
+data/scheduled/
+data/signatures/
+data/filters/
+data/calendars/
+data/calendar_shares/
+data/contacts/
+data/tickets/
+data/activity/
+data/users/
+data/cloud/
+data/uploads/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Temporary
+*.tmp
+*.bak
+tmp/

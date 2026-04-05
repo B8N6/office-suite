@@ -1,0 +1,8 @@
+{
+  "port": "8787",
+  "session_secret": "CHANGE-THIS-TO-A-LONG-RANDOM-SECRET",
+  "app_name": "B8N6 Office Suite",
+  "app_version": "1.0.0",
+  "msgs_per_page": 50,
+  "max_upload_mb": 25
+}
