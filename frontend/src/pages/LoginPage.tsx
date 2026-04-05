@@ -98,7 +98,7 @@ useMailStore.getState().setAdminFlags(!!res.data.isAdmin, (res.data.adminRole as
             />
           </div>
           <div className="form-group">
-            <label className="form-label">Password (Confidential)</label>
+            <label className="form-label">Password</label>
             <input
               type="password"
               className="form-input"
