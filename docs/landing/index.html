@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>B8N6 Office Suite — Self-hosted Webmail + Cloud</title>
+<meta name="description" content="Self-hosted multi-domain webmail client with cloud storage, calendar, support tickets, and admin panel. Single Go binary + React SPA." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bk: #050505; --bk2: #0a0a0a; --bk3: #0f0f0f; --bk4: #141414;
+    --wh: #F0EDE8; --dim: rgba(240,237,232,.55); --dim2: rgba(240,237,232,.35);
+    --yl: #F5C400; --ydim: #b38e00;
+    --bd: rgba(245,196,0,.15); --bd2: rgba(245,196,0,.26);
+    --green: #22c55e; --blue: #38bdf8;
+    --clip-sm: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+    --clip-md: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  }
+  html, body { background: var(--bk); color: var(--wh); font-family: 'Rajdhani', sans-serif; font-size: 16px; line-height: 1.6; }
+  body { overflow-x: hidden; }
+  ::selection { background: var(--yl); color: var(--bk); }
+
+  /* background grid */
+  body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+      linear-gradient(rgba(245,196,0,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(245,196,0,.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+    -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+  }
+
+  /* Top ticker */
+  .ticker {
+    height: 32px; display: flex; align-items: center;
+    background: rgba(5,5,5,.96); border-bottom: 1px solid var(--bd);
+    overflow: hidden; position: sticky; top: 0; z-index: 10;
+  }
+  .ticker-label {
+    flex-shrink: 0; padding: 0 14px; font-family: 'Share Tech Mono', monospace;
+    font-size: .58rem; letter-spacing: .22em; color: var(--bk); background: var(--yl);
+    height: 100%; display: flex; align-items: center; font-weight: 700;
+  }
+  .ticker-track {
+    display: flex; white-space: nowrap; animation: scroll 50s linear infinite;
+    will-change: transform;
+  }
+  .ticker-track span {
+    font-family: 'Share Tech Mono', monospace; font-size: .6rem; letter-spacing: .08em;
+    color: var(--yl); padding: 0 2rem;
+  }
+  @keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* Hero */
+  .hero { padding: 80px 0 60px; text-align: center; }
+  .hero-logo {
+    display: inline-block; font-family: 'Bebas Neue', sans-serif;
+    font-size: 5rem; letter-spacing: .1em; color: var(--yl);
+    text-shadow: 0 0 32px rgba(245,196,0,.4); line-height: 1; margin-bottom: 8px;
+  }
+  .hero-sub {
+    font-family: 'Share Tech Mono', monospace; font-size: .75rem;
+    color: var(--dim); letter-spacing: .3em; text-transform: uppercase; margin-bottom: 32px;
+  }
+  .hero-tag {
+    font-size: 1.4rem; color: var(--wh); max-width: 720px; margin: 0 auto 40px;
+    line-height: 1.5;
+  }
+  .hero-ver {
+    display: inline-block; font-family: 'Share Tech Mono', monospace; font-size: .7rem;
+    color: var(--yl); padding: 4px 12px; border: 1px solid var(--bd2);
+    clip-path: var(--clip-sm); margin-bottom: 16px; letter-spacing: .2em;
+  }
+
+  /* Buttons */
+  .btn-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 32px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: .5rem; padding: .9rem 1.8rem;
+    font-family: 'Share Tech Mono', monospace; font-size: .72rem; letter-spacing: .2em;
+    text-transform: uppercase; text-decoration: none; clip-path: var(--clip-md);
+    transition: all .2s;
+  }
+  .btn-primary { background: rgba(245,196,0,.12); border: 1px solid rgba(245,196,0,.5); color: var(--yl); }
+  .btn-primary:hover { background: rgba(245,196,0,.22); box-shadow: 0 0 20px rgba(245,196,0,.2); }
+  .btn-ghost { background: rgba(255,255,255,.02); border: 1px solid var(--bd); color: var(--dim); }
+  .btn-ghost:hover { background: rgba(255,255,255,.05); border-color: var(--bd2); color: var(--wh); }
+
+  /* Sections */
+  section { padding: 60px 0; border-top: 1px solid var(--bd); }
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; letter-spacing: .08em;
+    color: var(--yl); margin-bottom: 8px; text-align: center;
+  }
+  .section-sub {
+    font-family: 'Share Tech Mono', monospace; font-size: .65rem; color: var(--dim2);
+    letter-spacing: .2em; text-transform: uppercase; text-align: center; margin-bottom: 40px;
+  }
+
+  /* Feature grid */
+  .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  .feature {
+    background: var(--bk3); border: 1px solid var(--bd); padding: 24px;
+    clip-path: var(--clip-md); transition: all .2s;
+  }
+  .feature:hover { background: var(--bk4); border-color: var(--bd2); }
+  .feature-icon { font-size: 1.8rem; margin-bottom: 12px; display: block; }
+  .feature-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem;
+    letter-spacing: .08em; color: var(--yl); margin-bottom: 8px; }
+  .feature-desc { font-size: .88rem; color: var(--dim); line-height: 1.5; }
+
+  /* Install block */
+  .install {
+    background: var(--bk3); border: 1px solid var(--bd2); padding: 24px;
+    clip-path: var(--clip-md); max-width: 720px; margin: 0 auto;
+  }
+  .install-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem;
+    letter-spacing: .1em; color: var(--yl); margin-bottom: 12px; }
+  .install code {
+    display: block; background: var(--bk); border: 1px solid var(--bd);
+    padding: 14px 16px; font-family: 'Share Tech Mono', monospace; font-size: .8rem;
+    color: var(--wh); line-height: 1.8; overflow-x: auto; white-space: pre;
+  }
+  .install code .c { color: var(--dim2); }
+  .install code .k { color: var(--yl); }
+
+  /* Hosting */
+  .hosts { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .host {
+    background: var(--bk3); border: 1px solid var(--bd); padding: 18px;
+    text-align: center; clip-path: var(--clip-sm); text-decoration: none;
+    color: var(--wh); transition: all .2s;
+  }
+  .host:hover { background: var(--bk4); border-color: var(--yl); }
+  .host-name { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: .1em; color: var(--yl); }
+  .host-desc { font-size: .72rem; color: var(--dim); margin-top: 4px; }
+
+  /* Footer */
+  footer { border-top: 1px solid var(--bd); padding: 40px 0; text-align: center;
+    color: var(--dim2); font-size: .8rem; font-family: 'Share Tech Mono', monospace;
+    letter-spacing: .1em; }
+  footer a { color: var(--yl); text-decoration: none; }
+
+  a.inline { color: var(--yl); text-decoration: none; }
+  a.inline:hover { text-decoration: underline; }
+
+  @media (max-width: 640px) {
+    .hero-logo { font-size: 3.2rem; }
+    .hero-tag { font-size: 1.1rem; }
+    .section-title { font-size: 1.8rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="ticker">
+  <div class="ticker-label">▶ LIVE</div>
+  <div class="ticker-track">
+    <span>◉ B8N6 OFFICE SUITE v1.0.0</span>
+    <span>▸ SELF-HOSTED</span>
+    <span>▸ MULTI-DOMAIN</span>
+    <span>▸ IMAP + SMTP</span>
+    <span>▸ CLOUD STORAGE</span>
+    <span>▸ CALENDAR</span>
+    <span>▸ SUPPORT TICKETS</span>
+    <span>⬡ OPEN SOURCE</span>
+    <span>◈ GO + REACT</span>
+    <span>◎ 100% OWNERSHIP</span>
+    <span>◉ B8N6 OFFICE SUITE v1.0.0</span>
+    <span>▸ SELF-HOSTED</span>
+    <span>▸ MULTI-DOMAIN</span>
+    <span>▸ IMAP + SMTP</span>
+    <span>▸ CLOUD STORAGE</span>
+    <span>▸ CALENDAR</span>
+    <span>▸ SUPPORT TICKETS</span>
+    <span>⬡ OPEN SOURCE</span>
+    <span>◈ GO + REACT</span>
+    <span>◎ 100% OWNERSHIP</span>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- HERO -->
+  <section class="hero" style="border: none; padding-top: 60px;">
+    <span class="hero-ver">VERSION 1.0.0 · APRIL 2026</span>
+    <h1 class="hero-logo">B8N6</h1>
+    <div class="hero-sub">OFFICE SUITE</div>
+    <p class="hero-tag">
+      Self-hosted multi-domain webmail with cloud storage, calendar sharing,
+      and a full admin panel. Single Go binary. No database required.
+    </p>
+    <div class="btn-row">
+      <a href="https://github.com/B8N6/office-suite" class="btn btn-primary">
+        ⬢ View on GitHub
+      </a>
+      <a href="https://github.com/B8N6/office-suite/releases/latest" class="btn btn-ghost">
+        ↓ Download v1.0.0
+      </a>
+      <a href="https://github.com/B8N6/office-suite/blob/main/INSTALL.md" class="btn btn-ghost">
+        ☰ Install Guide
+      </a>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section>
+    <h2 class="section-title">CORE FEATURES</h2>
+    <div class="section-sub">Built for teams who own their infrastructure</div>
+    <div class="features">
+      <div class="feature">
+        <span class="feature-icon">📧</span>
+        <div class="feature-title">IMAP Mail Client</div>
+        <div class="feature-desc">Full-featured reader & writer with threading, rich compose, scheduled send, filter rules, signatures, attachments up to 25MB.</div>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">🔗</span>
+        <div class="feature-title">Multi-Account</div>
+        <div class="feature-desc">Log into multiple mailboxes. Switch with one click. Unified "All Inboxes" view. Colour-coded avatars per account.</div>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">☁️</span>
+        <div class="feature-title">Cloud Storage</div>
+        <div class="feature-desc">Upload files, share with specific emails, domain-wide, or public links. Per-user quotas. Per-domain caps.</div>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">📅</span>
+        <div class="feature-title">Shared Calendar</div>
+        <div class="feature-desc">Day/week/month views. Share calendars with teammates. Colour-coded events.</div>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">💬</span>
+        <div class="feature-title">Support Tickets</div>
+        <div class="feature-desc">Users open tickets from Settings. Admins reply from the dashboard. Domain-scoped for multi-tenant setups.</div>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">🎨</span>
+        <div class="feature-title">White-Label</div>
+        <div class="feature-desc">Owners customize app name, logo, favicon, and full color palette. Per-domain theme overrides for multi-brand deployments.</div>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">🛡️</span>
+        <div class="feature-title">Role-Based Admin</div>
+        <div class="feature-desc">Two-tier RBAC: owners manage everything, domain admins scoped to assigned domains. Passwordless admin via IMAP ownership.</div>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">🌓</span>
+        <div class="feature-title">Dark + Light</div>
+        <div class="feature-desc">Per-user theme toggle. Each domain can define its own dark and light palettes independently.</div>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">⚡</span>
+        <div class="feature-title">Zero Database</div>
+        <div class="feature-desc">Single Go binary + React SPA + JSON files in <code>data/</code>. No Postgres, no Redis, no setup friction.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INSTALL -->
+  <section>
+    <h2 class="section-title">QUICK INSTALL</h2>
+    <div class="section-sub">One-shot installer for Ubuntu / Debian</div>
+    <div class="install">
+      <div class="install-title">▸ UBUNTU 22.04+ / DEBIAN 11+</div>
+<code><span class="c"># Clone + install with systemd service</span>
+git clone https://github.com/B8N6/office-suite.git
+cd office-suite
+sudo bash deploy-ubuntu.sh
+
+<span class="c"># Bootstrap your first owner</span>
+sudo systemctl edit b8n6-office-suite
+<span class="c"># add: Environment=B8N6_INITIAL_OWNER_EMAIL=admin@yourdomain.com</span>
+sudo systemctl restart b8n6-office-suite
+
+<span class="c"># Access at http://your-server:8787</span></code>
+    </div>
+    <div style="text-align: center; margin-top: 24px;">
+      <a href="https://github.com/B8N6/office-suite/blob/main/INSTALL.md" class="btn btn-ghost">
+        → Full Install Guide
+      </a>
+    </div>
+  </section>
+
+  <!-- HOSTING -->
+  <section>
+    <h2 class="section-title">DEPLOY ANYWHERE</h2>
+    <div class="section-sub">Any Linux VPS · Docker · Kubernetes · bare metal</div>
+    <div class="hosts">
+      <a href="https://www.digitalocean.com" class="host" target="_blank" rel="noopener">
+        <div class="host-name">DigitalOcean</div>
+        <div class="host-desc">$4/mo droplet</div>
+      </a>
+      <a href="https://www.hetzner.com" class="host" target="_blank" rel="noopener">
+        <div class="host-name">Hetzner</div>
+        <div class="host-desc">€3.79/mo CX22</div>
+      </a>
+      <a href="https://www.linode.com" class="host" target="_blank" rel="noopener">
+        <div class="host-name">Linode</div>
+        <div class="host-desc">Nanode 1GB</div>
+      </a>
+      <a href="https://www.vultr.com" class="host" target="_blank" rel="noopener">
+        <div class="host-name">Vultr</div>
+        <div class="host-desc">Regular cloud</div>
+      </a>
+      <a href="https://railway.app" class="host" target="_blank" rel="noopener">
+        <div class="host-name">Railway</div>
+        <div class="host-desc">Nixpacks build</div>
+      </a>
+      <a href="https://render.com" class="host" target="_blank" rel="noopener">
+        <div class="host-name">Render</div>
+        <div class="host-desc">Web service</div>
+      </a>
+      <a href="https://fly.io" class="host" target="_blank" rel="noopener">
+        <div class="host-name">Fly.io</div>
+        <div class="host-desc">Global edge</div>
+      </a>
+      <a href="https://aws.amazon.com/ec2" class="host" target="_blank" rel="noopener">
+        <div class="host-name">AWS EC2</div>
+        <div class="host-desc">t4g.nano</div>
+      </a>
+    </div>
+  </section>
+
+  <!-- TECH -->
+  <section>
+    <h2 class="section-title">TECH STACK</h2>
+    <div class="section-sub">Modern, boring, proven</div>
+    <div class="features">
+      <div class="feature">
+        <div class="feature-title">⬡ BACKEND</div>
+        <div class="feature-desc">
+          Go 1.22 · gorilla/mux · gorilla/sessions · go-imap · net/smtp<br>
+          Single binary, ~10MB. Starts in milliseconds.
+        </div>
+      </div>
+      <div class="feature">
+        <div class="feature-title">⬡ FRONTEND</div>
+        <div class="feature-desc">
+          React 18 · TypeScript · Vite · Zustand · React Query · TipTap<br>
+          Served as static assets from the Go binary.
+        </div>
+      </div>
+      <div class="feature">
+        <div class="feature-title">⬡ STORAGE</div>
+        <div class="feature-desc">
+          File-based JSON · MD5-hashed per-user dirs · Atomic writes<br>
+          Practical for up to ~50k users per instance.
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <div>
+    B8N6 OFFICE SUITE · © 2026 B8N6 ·
+    <a href="https://github.com/B8N6/office-suite/blob/main/LICENSE">LICENSE</a> ·
+    <a href="https://github.com/B8N6/office-suite">GITHUB</a> ·
+    <a href="https://github.com/B8N6/office-suite/issues">ISSUES</a>
+  </div>
+</footer>
+
+</body>
+</html>
